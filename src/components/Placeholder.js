@@ -1,13 +1,21 @@
-// 공용 placeholder 화면 — 뼈대 단계 스택 화면용 (내용 단계에서 각 화면이 대체)
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, font } from '../../theme';
+// 공용 placeholder 화면 — 아이콘 원형 배지 + 타이틀/설명
+import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, spacing } from '../../theme';
+import ThemedText from './ThemedText';
 
-export default function Placeholder({ emoji, title, description }) {
+export default function Placeholder({ icon = 'sparkles-outline', title, description }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <View style={styles.iconCircle}>
+        <Ionicons name={icon} size={28} color={colors.primary} />
+      </View>
+      <ThemedText variant="title" style={styles.title}>
+        {title}
+      </ThemedText>
+      <ThemedText variant="body" style={styles.description}>
+        {description}
+      </ThemedText>
     </View>
   );
 }
@@ -20,7 +28,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     padding: spacing.xl,
   },
-  emoji: { fontSize: 56, marginBottom: spacing.md },
-  title: { color: colors.text, fontSize: font.title, fontWeight: '700', marginBottom: spacing.sm },
-  description: { color: colors.sub, fontSize: font.body, textAlign: 'center', lineHeight: 22 },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  title: { marginBottom: spacing.sm, textAlign: 'center' },
+  description: { textAlign: 'center' },
 });

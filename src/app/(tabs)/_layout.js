@@ -1,6 +1,14 @@
-// 하단 탭 4개 — 전통적 Tabs (DEVLOG 결정 4)
+// 하단 탭 4개 — 전통적 Tabs + 플랫폼 아이콘 (이모지 아이콘 금지)
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { colors } from '../../../theme';
+
+const TAB_ICONS = {
+  index: { focused: 'home', idle: 'home-outline' },
+  records: { focused: 'stats-chart', idle: 'stats-chart-outline' },
+  tips: { focused: 'bulb', idle: 'bulb-outline' },
+  settings: { focused: 'settings', idle: 'settings-outline' },
+};
 
 export default function TabsLayout() {
   return (
@@ -14,10 +22,42 @@ export default function TabsLayout() {
         headerTitleStyle: { color: colors.text, fontWeight: '700' },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: '홈' }} />
-      <Tabs.Screen name="records" options={{ title: '내 기록' }} />
-      <Tabs.Screen name="tips" options={{ title: '팁' }} />
-      <Tabs.Screen name="settings" options={{ title: '설정' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: '홈',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_ICONS.index[focused ? 'focused' : 'idle']} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="records"
+        options={{
+          title: '내 기록',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_ICONS.records[focused ? 'focused' : 'idle']} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tips"
+        options={{
+          title: '팁',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_ICONS.tips[focused ? 'focused' : 'idle']} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: '설정',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={TAB_ICONS.settings[focused ? 'focused' : 'idle']} size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

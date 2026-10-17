@@ -5,6 +5,21 @@ const ACTIVITY_FACTORS = {
   '매우높음': 1.725,
 };
 
+export function bmiOf({ height, weight }) {
+  const h = Number(height) / 100;
+  const w = Number(weight);
+  if (!h || !w) return null;
+  return Math.round((w / (h * h)) * 10) / 10;
+}
+
+export function bmiLabel(bmi) {
+  if (bmi == null) return '정보 없음';
+  if (bmi < 18.5) return '저체중';
+  if (bmi < 23) return '정상';
+  if (bmi < 25) return '과체중';
+  return '비만';
+}
+
 export function bmr({ gender, age, height, weight }) {
   const base = 10 * weight + 6.25 * height - 5 * age;
   return Math.round(gender === '남' ? base + 5 : base - 161);
@@ -31,27 +46,35 @@ export function analyze(answers) {
   if (a.carbSensitivity === '높음') {
     sugarSignals.push({
       type: 'sensitivity',
-      text: '탄수화물 민감도가 높아요 — 식사 후 혈당 상승에 주의하세요.',
+      text: '탄수화물 민감도가 높으니 식사 후 혈당 상승에 주의해야 함.',
     });
   }
   if (a.stress === '높음') {
     sugarSignals.push({
       type: 'stress',
-      text: '스트레스가 높으면 혈당 변동이 커질 수 있어요.',
+      text: '스트레스 관리로 혈당 변동을 줄여야 함.',
     });
   }
   if (Number(a.sleep) > 0 && Number(a.sleep) < 6) {
     sugarSignals.push({
       type: 'sleep',
-      text: '수면이 6시간 미만이면 혈당 조절이 나빠질 수 있어요.',
+      text: '수면을 6시간 이상으로 늘려야 함.',
     });
   }
   if (a.familyHistory === true) {
     sugarSignals.push({
       type: 'family',
-      text: '가족력이 있다면 정기적인 혈당 체크를 권장해요.',
+      text: '가족력이 있으니 정기적인 혈당 체크를 해야 함.',
     });
   }
 
-  return { bmr: baseBmr, tdee, targetCalories, carbTarget, sugarSignals };
+  return {
+    bmr: baseBmr,
+    tdee,
+    targetCalories,
+    carbTarget,
+    sugarSignals,
+    bmi: bmiOf({ height: Number(a.height), weight: Number(a.weight) }),
+    bmiLabel: bmiLabel(bmiOf({ height: Number(a.height), weight: Number(a.weight) })),
+  };
 }
