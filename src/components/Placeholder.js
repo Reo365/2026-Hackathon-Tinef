@@ -8,7 +8,7 @@ export default function Placeholder({ icon = 'sparkles-outline', title, descript
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={28} color={colors.primary} />
+        <Ionicons name={icon} size={28} color={colors.primaryDeep} />
       </View>
       <ThemedText variant="title" style={styles.title}>
         {title}

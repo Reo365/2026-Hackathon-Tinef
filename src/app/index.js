@@ -29,7 +29,7 @@ export default function Gate() {
           gap: spacing.md,
         }}
       >
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.primaryDeep} />
       </View>
     );
   }

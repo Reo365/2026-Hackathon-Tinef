@@ -166,7 +166,7 @@ export default function RecordDetailScreen() {
                 <Ionicons
                   name={itemsExpanded ? 'chevron-up' : 'chevron-down'}
                   size={16}
-                  color={colors.primary}
+                  color={colors.primaryDeep}
                 />
                 <ThemedText variant="subhead" style={styles.moreText}>
                   {itemsExpanded ? '접기' : `더보기 (외 ${items.length - 5}개)`}
@@ -214,7 +214,7 @@ export default function RecordDetailScreen() {
               <Ionicons
                 name={risesExpanded ? 'chevron-up' : 'chevron-down'}
                 size={16}
-                color={colors.primary}
+                color={colors.primaryDeep}
               />
               <ThemedText variant="subhead" style={styles.moreText}>
                 {risesExpanded
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   recipeBlock: { gap: spacing.xs, marginTop: spacing.sm },
   recipeTitle: { color: colors.text },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
-  moreText: { color: colors.primary, fontWeight: '600' },
+  moreText: { color: colors.primaryDeep, fontWeight: '600' },
   peakRow: {
     flexDirection: 'row',
     alignItems: 'center',

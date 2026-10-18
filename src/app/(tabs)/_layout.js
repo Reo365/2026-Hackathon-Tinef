@@ -1,7 +1,7 @@
-// 하단 탭 3개 — 전통적 Tabs + 플랫폼 아이콘 (이모지 아이콘 금지)
+// 하단 탭 3개 — 플로팅 독 형태 (둥근 캡슐, 화면 위에 떠 있음) + 플랫폼 아이콘 (이모지 아이콘 금지)
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { colors } from '../../../theme';
+import { colors, radius, shadows, spacing } from '../../../theme';
 
 const TAB_ICONS = {
   index: { focused: 'home', idle: 'home-outline' },
@@ -14,11 +14,24 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.primaryDeep,
         tabBarInactiveTintColor: colors.sub,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.bg },
         headerTitleStyle: { color: colors.text, fontWeight: '700' },
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: spacing.sm,
+          marginHorizontal: spacing.md,
+          height: 58,
+          backgroundColor: colors.card,
+          borderRadius: radius.full,
+          borderCurve: 'continuous',
+          borderWidth: 1,
+          borderColor: colors.border,
+          boxShadow: shadows.raised,
+        },
       }}
     >
       <Tabs.Screen

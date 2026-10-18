@@ -101,11 +101,11 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
+  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl + spacing.lg },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   date: { flex: 1, color: colors.text },
   mealBadge: {
-    color: colors.primary,
+    color: colors.primaryDeep,
     backgroundColor: colors.primarySoft,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,

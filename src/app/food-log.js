@@ -583,7 +583,7 @@ export default function FoodLogScreen() {
             accessibilityRole="button"
             accessibilityLabel="앨범에서 사진 선택해서 분석"
           >
-            <Ionicons name="image" size={18} color={colors.primary} />
+            <Ionicons name="image" size={18} color={colors.primaryDeep} />
             <ThemedText variant="subhead" style={styles.secondaryButtonText}>
               앨범에서 선택
             </ThemedText>
@@ -634,7 +634,7 @@ export default function FoodLogScreen() {
                 <Ionicons
                   name={itemsExpanded ? 'chevron-up' : 'chevron-down'}
                   size={16}
-                  color={colors.primary}
+                  color={colors.primaryDeep}
                 />
                 <ThemedText variant="subhead" style={styles.moreText}>
                   {itemsExpanded ? '접기' : `더보기 (외 ${items.length - 5}개)`}
@@ -708,7 +708,7 @@ export default function FoodLogScreen() {
                 <Ionicons
                   name={predictionExpanded ? 'chevron-up' : 'chevron-down'}
                   size={16}
-                  color={colors.primary}
+                  color={colors.primaryDeep}
                 />
                 <ThemedText variant="subhead" style={styles.moreText}>
                   {predictionExpanded
@@ -809,7 +809,7 @@ export default function FoodLogScreen() {
                 onPress={() => loadRecipes(items)}
                 accessibilityRole="button"
               >
-                <Ionicons name="refresh" size={16} color={colors.primary} />
+                <Ionicons name="refresh" size={16} color={colors.primaryDeep} />
                 <ThemedText variant="subhead" style={styles.secondaryButtonText}>
                   다시 시도
                 </ThemedText>
@@ -876,14 +876,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.primaryDeep,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     paddingVertical: spacing.md,
   },
   buttonPressed: { opacity: 0.7 },
   primaryButtonText: { color: colors.onTint, fontWeight: '600' },
-  secondaryButtonText: { color: colors.primary, fontWeight: '600' },
+  secondaryButtonText: { color: colors.primaryDeep, fontWeight: '600' },
   errorText: { color: colors.danger },
   successCard: {
     flexDirection: 'row',
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   recipeTitle: { color: colors.text },
   skeletonStack: { gap: spacing.sm },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
-  moreText: { color: colors.primary, fontWeight: '600' },
+  moreText: { color: colors.primaryDeep, fontWeight: '600' },
   segmentRow: { flexDirection: 'row', gap: spacing.sm },
   segment: {
     flex: 1,
@@ -918,9 +918,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
   },
-  segmentActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  segmentActive: { borderColor: colors.primaryDeep, backgroundColor: colors.primarySoft },
   segmentText: { color: colors.sub },
-  segmentTextActive: { color: colors.primary, fontWeight: '600' },
+  segmentTextActive: { color: colors.primaryDeep, fontWeight: '600' },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',

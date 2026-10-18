@@ -28,7 +28,7 @@ export default function TimeTiles({ value, onChange }) {
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name={opt.icon} size={20} color={selected ? colors.primary : colors.sub} />
+            <Ionicons name={opt.icon} size={20} color={selected ? colors.primaryDeep : colors.sub} />
             <ThemedText variant="caption" style={selected ? styles.tileTextSelected : styles.tileText}>
               {opt.value}
             </ThemedText>
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     paddingVertical: spacing.sm + 2,
   },
-  tileSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  tileSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primaryDeep },
   pressed: { opacity: 0.7 },
   tileText: { color: colors.sub },
-  tileTextSelected: { color: colors.primary, fontWeight: '600' },
+  tileTextSelected: { color: colors.primaryDeep, fontWeight: '600' },
 });

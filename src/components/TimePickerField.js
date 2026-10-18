@@ -51,7 +51,7 @@ export default function TimePickerField({ label, value, onChange }) {
         </ThemedText>
         {hasValue && (
           <View style={styles.valuePill}>
-            <Ionicons name="time" size={12} color={colors.primary} />
+            <Ionicons name="time" size={12} color={colors.primaryDeep} />
             <ThemedText variant="caption" style={styles.valueText}>
               {value}
             </ThemedText>
@@ -100,7 +100,7 @@ export default function TimePickerField({ label, value, onChange }) {
             accessibilityRole="button"
             accessibilityLabel={`${label} 시간 설정`}
           >
-            <Ionicons name="time-outline" size={16} color={colors.primary} />
+            <Ionicons name="time-outline" size={16} color={colors.primaryDeep} />
             <ThemedText variant="subhead" style={styles.pickerText}>
               시간 설정
             </ThemedText>
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  valueText: { color: colors.primary, fontWeight: '700' },
+  valueText: { color: colors.primaryDeep, fontWeight: '700' },
   inputRow: { flexDirection: 'row', gap: spacing.sm },
   input: {
     flex: 1,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   applyButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDeep,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     alignItems: 'center',
@@ -183,14 +183,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.primaryDeep,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignSelf: 'flex-start',
   },
-  pickerText: { color: colors.primary, fontWeight: '600' },
+  pickerText: { color: colors.primaryDeep, fontWeight: '600' },
   modalBackdrop: {
     flex: 1,
     backgroundColor: colors.scrim,

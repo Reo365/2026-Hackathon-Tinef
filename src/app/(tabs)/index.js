@@ -1,4 +1,4 @@
-// 홈 — 설문 기반 개인화 대시보드 (A)
+﻿// 홈 — 설문 기반 개인화 대시보드 (A)
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -13,10 +13,10 @@ import { glucoseLevel, predictGlucose } from '../../lib/rules';
 const SHORTCUTS = [
   { icon: 'water', label: '혈당 예측', href: '/predict' },
   { icon: 'restaurant', label: '식단 분석', href: '/food-log' },
-  { icon: 'time-outline', label: '루틴 계획', href: '/schedule' },
+  { icon: 'time-outline', label: '스케줄 계획', href: '/schedule' },
 ];
 
-const LEVEL_TEXT = { ok: '정상 범위', warn: '주의 구간', danger: '경고 구간' };
+const LEVEL_TEXT = { ok: '완만해요', warn: '다소 높아요', danger: '스파이크 주의' };
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <ThemedText variant="largeTitle">오늘도 건강하게</ThemedText>
+      <ThemedText variant="largeTitle">Sugar Compass</ThemedText>
 
       {/* 앱의 핵심 가치(예상 혈당) — 오늘 마지막 식사 기록 기준 predictGlucose, 기록 전에는 수치 미표시 */}
       <Card style={styles.hero}>
@@ -86,7 +86,7 @@ export default function HomeScreen() {
             onPress={() => router.push(item.href)}
           >
             <View style={styles.shortcutIcon}>
-              <Ionicons name={item.icon} size={22} color={colors.primary} />
+              <Ionicons name={item.icon} size={22} color={colors.primaryDeep} />
             </View>
             <ThemedText variant="headline" style={styles.shortcutLabel}>
               {item.label}
@@ -117,7 +117,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   // 섹션 간격 lg — 행/그룹/섹션 계층 구분 (16-Everything 방지)
-  content: { padding: spacing.md, gap: spacing.lg, paddingBottom: spacing.xl },
+  content: { padding: spacing.md, gap: spacing.lg, paddingBottom: spacing.xxl + spacing.lg },
   hero: { backgroundColor: colors.primary, boxShadow: shadows.raised },
   onTintSoft: { color: colors.onTintSoft },
   shortcutGroup: {

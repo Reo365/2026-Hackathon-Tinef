@@ -16,21 +16,21 @@ import { get, set, KEYS } from '../lib/storage';
 
 const CHART_LABELS = ['식전', '30분', '1시간', '2시간', '3시간'];
 
-// 혈당 구간별 분석 결과 — 액션은 "~해야 함" 문체 (문체 가이드 7장)
+// 혈당 구간별 분석 결과 — 스파이크·식곤증 프레임, 액션은 "~해야 함" 문체 (문체 가이드 7장)
 const ANALYSIS_BY_LEVEL = {
   ok: [
-    '지금 식단 구성을 유지해도 혈당에 큰 영향이 없을 것으로 예상돼요.',
+    '지금 식단 구성을 유지해도 식곤증 걱정이 적을 것으로 예상돼요.',
     '채소와 단백질을 먼저 먹는 순서를 지켜야 함.',
     '식후 가벼운 산책을 유지해야 함.',
   ],
   warn: [
-    '식후 혈당 상승이 큰 편이에요. 구성을 점검할 타이밍이에요.',
+    '식후 혈당이 다소 높아 졸림이 올 수 있어요. 구성을 점검할 타이밍이에요.',
     '흰쌀·빵·단 음료를 통곡물로 대체해야 함.',
     '식사 시 채소와 단백질을 먼저 섭취해야 함.',
     '식후 30분 산책을 습관화해야 함.',
   ],
   danger: [
-    '혈당 급상승이 예상돼요. 구성 조정이 필요해요.',
+    '혈당 스파이크로 식곤증·나른함이 예상돼요. 구성 조정이 필요해요.',
     '고GI 탄수화물 양을 절반 이하로 줄여야 함.',
     '당 음료 대신 물이나 무당 음료를 선택해야 함.',
     '식후 산책으로 상승을 완화해야 함.',
@@ -175,7 +175,8 @@ export default function PredictResultScreen() {
               </View>
               <BloodSugarChart labels={CHART_LABELS} values={chartValues} />
               <ThemedText variant="caption" style={styles.chartNote}>
-                최고 {prediction.peakMgDl} mg/dL · 공복 {prediction.base} 기준 추정
+                최고 {prediction.peakMgDl} mg/dL · 공복 {prediction.base} 기준 추정 — 식후 140 이상은
+                스파이크 구간이에요
               </ThemedText>
             </>
           ) : (
@@ -205,7 +206,7 @@ export default function PredictResultScreen() {
           onPress={() => setShowCombination(true)}
           accessibilityRole="button"
         >
-          <Ionicons name="bulb" size={16} color={colors.primary} />
+          <Ionicons name="bulb" size={16} color={colors.primaryDeep} />
           <ThemedText variant="subhead" style={styles.secondaryButtonText}>
             맞춤 식단 추천 보기
           </ThemedText>
@@ -289,12 +290,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.primaryDeep,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     paddingVertical: spacing.md,
   },
-  secondaryButtonText: { color: colors.primary, fontWeight: '600' },
+  secondaryButtonText: { color: colors.primaryDeep, fontWeight: '600' },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: colors.primary,

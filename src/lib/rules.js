@@ -42,10 +42,13 @@ export function predictGlucose(items, surveyAnswers, mealTime) {
   return { peakMgDl: BASE_GLUCOSE + totalRise, risePerItem, base: BASE_GLUCOSE };
 }
 
-// 혈당 수준 분류 — StatusBadge·문구 표준화 기준 (정상 <140 / 주의 140~199 / 경고 ≥200)
+// 혈당 수준 분류 — 스파이크·식곤증 프레임 (당뇨 진단 기준 아님, 제품 목적 = 급상승·식곤증 방지)
+//   peak < 120: 완만한 상승 (식곤증 가능성 낮음)
+//   120~139: 다소 높음 — 졸림이 올 수 있음
+//   ≥ 140: 스파이크 — 건강한 사람도 이 구간은 급상승으로 봄 (식곤증·나른함 가능성 높음)
 export function glucoseLevel(mgDl) {
   if (mgDl == null) return 'ok';
-  if (mgDl >= 200) return 'danger';
-  if (mgDl >= 140) return 'warn';
+  if (mgDl >= 140) return 'danger';
+  if (mgDl >= 120) return 'warn';
   return 'ok';
 }

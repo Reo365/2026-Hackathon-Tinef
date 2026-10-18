@@ -1,5 +1,5 @@
-﻿// 루틴 계획 — 기상·취침 설정 + 사용자 직접 계획 추가 → AI 맞춤 하루 시간표
-// 기본 룰 타임라인(lib/routine.js)은 즉시 미리보기용, "AI로 루틴 만들기"가 개인화 시간표를 생성·저장
+﻿// 스케줄 계획 — 기상·취침/내 계획 설정 + AI 혈당 관리 가이드 (시간별 조언)
+// 타임라인에는 사용자가 입력한 계획만 표시되고, 가이드 카드에 식사·혈당 상승·저강 타이밍 조언이 표시됨
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -8,37 +8,25 @@ import Card from '../components/Card';
 import ThemedText from '../components/ThemedText';
 import Skeleton from '../components/Skeleton';
 import AnimatedSection from '../components/AnimatedSection';
-import { buildRoutine, timeToMinutes } from '../lib/routine';
-import { generateRoutinePlan } from '../lib/ai';
 import TimePickerField from '../components/TimePickerField';
+import { generateRoutinePlan } from '../lib/ai';
 import { get, set, KEYS } from '../lib/storage';
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-const TYPE_META = {
-  wake: { icon: 'sunny-outline', color: colors.accent },
-  meal: { icon: 'restaurant', color: colors.primary },
-  glucose: { icon: 'water', color: colors.warning },
-  exercise: { icon: 'fitness', color: colors.success },
-  snack: { icon: 'fast-food-outline', color: colors.accent },
-  sleep: { icon: 'bed-outline', color: colors.accent },
-  custom: { icon: 'calendar-outline', color: colors.text },
-};
 
 export default function ScheduleScreen() {
   const [settings, setSettings] = useState({
     wakeTime: null,
     bedTime: null,
     customPlans: [],
-    aiPlan: null,
+    advice: null,
   });
   const [answers, setAnswers] = useState(null);
   const [planTitle, setPlanTitle] = useState('');
   const [planTime, setPlanTime] = useState('');
   const [planError, setPlanError] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiFailed, setAiFailed] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceFailed, setAdviceFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -51,7 +39,7 @@ export default function ScheduleScreen() {
           wakeTime: stored.wakeTime || null,
           bedTime: stored.bedTime || null,
           customPlans: Array.isArray(stored.customPlans) ? stored.customPlans : [],
-          aiPlan: stored.aiPlan || null,
+          advice: stored.advice || null,
         });
       }
       setAnswers(a);
@@ -62,17 +50,14 @@ export default function ScheduleScreen() {
     };
   }, []);
 
-  // 기본 룰 타임라인 — 즉시 미리보기 + AI 프롬프트 참고용
-  const routine = buildRoutine({ wakeTime: settings.wakeTime, bedTime: settings.bedTime }, answers);
-
   const persist = async (next) => {
-    const ok = await set(KEYS.ROUTINE_SETTINGS, next);
-    if (ok) setSaved(true);
+    await set(KEYS.ROUTINE_SETTINGS, next);
   };
 
   const updateSettings = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    persist(next);
   };
 
   const addCustomPlan = () => {
@@ -95,37 +80,38 @@ export default function ScheduleScreen() {
     updateSettings('customPlans', settings.customPlans.filter((p) => p.id !== id));
   };
 
-  const generateAI = async () => {
-    setAiLoading(true);
-    setAiFailed(false);
-    const plan = await generateRoutinePlan({
-      // 미설정 시 룰 기본값(07:00/23:00)으로 AI에 전달
+  const generateAdvice = async () => {
+    setAdviceLoading(true);
+    setAdviceFailed(false);
+    // 복구된 generateRoutinePlan — 전체 스케줄을 가이드 행(시간 + 제목/설명)으로 표시
+    const result = await generateRoutinePlan({
+      // 미설정 시 룰 기본값으로 전달
       wakeTime: settings.wakeTime || '07:00',
       bedTime: settings.bedTime || '23:00',
       customPlans: settings.customPlans,
       surveyAnswers: answers,
-      baseline: routine.schedule,
     });
-    setAiLoading(false);
-    if (plan) {
-      const next = {
-        ...settings,
-        aiPlan: { ...plan, createdAt: new Date().toISOString() },
-      };
-      setSettings(next);
-      persist(next);
+    setAdviceLoading(false);
+    if (result) {
+      updateSettings('advice', {
+        items: result.schedule.map((s) => ({
+          time: s.time,
+          text: `${s.title}${s.desc ? ' — ' + s.desc : ''}`,
+        })),
+        createdAt: new Date().toISOString(),
+      });
     } else {
-      setAiFailed(true);
+      setAdviceFailed(true);
     }
   };
 
-  const displaySchedule = settings.aiPlan ? settings.aiPlan.schedule : routine.schedule;
-  const comment = settings.aiPlan ? settings.aiPlan.comment : null;
+  const sortedPlans = [...settings.customPlans].sort((a, b) => a.time.localeCompare(b.time));
+  const adviceItems = settings.advice?.items || [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <ThemedText variant="subhead" style={styles.lead}>
-        기상·취침과 내 계획을 정하면 AI가 혈당 관리에 맞춘 하루 루틴을 만들어 드려요
+        기상·취침과 내 계획을 정하면 AI가 혈당 스파이크 없이 하루를 보낼 수 있는 가이드를 만들어 드려요
       </ThemedText>
 
       <Card>
@@ -136,38 +122,40 @@ export default function ScheduleScreen() {
         />
         <TimePickerField
           label="취침 시간"
-          
           value={settings.bedTime}
           onChange={(v) => updateSettings('bedTime', v)}
         />
-        <ThemedText variant="caption" style={styles.hint}>
-          식사 시간은 룰로 자동 계산돼요 (아침 기상+30분 · 점심 · 저녁 취침 3시간 전)
-        </ThemedText>
       </Card>
 
-      {/* 사용자 직접 계획 추가 */}
+      {/* 내 계획 — 사용자가 입력한 계획만 스케줄 형식으로 표시 */}
       <AnimatedSection>
         <Card>
           <ThemedText variant="headline" style={styles.cardTitle}>
-            내 계획 추가
+            내 계획
           </ThemedText>
-          {settings.customPlans.map((p) => (
-            <View key={p.id} style={styles.customRow}>
-              <ThemedText variant="subhead" style={styles.customTime}>
-                {p.time}
-              </ThemedText>
-              <ThemedText variant="body" style={styles.customTitle}>
-                {p.title}
-              </ThemedText>
-              <Pressable
-                onPress={() => removeCustomPlan(p.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`${p.title} 계획 삭제`}
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.danger} />
-              </Pressable>
-            </View>
-          ))}
+          {sortedPlans.length === 0 ? (
+            <ThemedText variant="subhead" style={styles.emptyText}>
+              아래 입력란에 계획을 추가해 주세요.
+            </ThemedText>
+          ) : (
+            sortedPlans.map((p) => (
+              <View key={p.id} style={styles.customRow}>
+                <ThemedText variant="subhead" style={styles.customTime}>
+                  {p.time}
+                </ThemedText>
+                <ThemedText variant="body" style={styles.customTitle}>
+                  {p.title}
+                </ThemedText>
+                <Pressable
+                  onPress={() => removeCustomPlan(p.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${p.title} 계획 삭제`}
+                >
+                  <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                </Pressable>
+              </View>
+            ))
+          )}
           <View style={styles.inputRow}>
             <TextInput
               style={styles.timeInput}
@@ -202,104 +190,64 @@ export default function ScheduleScreen() {
         </Card>
       </AnimatedSection>
 
-      {saved && (
-        <AnimatedSection>
-          <Card style={styles.successCard}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <ThemedText variant="subhead" style={styles.successText}>
-              루틴을 저장했어요
-            </ThemedText>
-          </Card>
-        </AnimatedSection>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.primaryButton,
-          (aiLoading || !loaded) && styles.disabledButton,
-          pressed && styles.pressed,
-        ]}
-        onPress={generateAI}
-        disabled={aiLoading || !loaded}
-        accessibilityRole="button"
-      >
-        <Ionicons name="sparkles" size={16} color={colors.onTint} />
-        <ThemedText variant="headline" style={styles.primaryButtonText}>
-          {aiLoading ? '루틴 생성 중...' : settings.aiPlan ? 'AI 루틴 다시 만들기' : 'AI로 루틴 만들기'}
-        </ThemedText>
-      </Pressable>
-
-      {/* 타임라인 — AI 생성 계획 우선, 없으면 룰 기본안 */}
+      {/* 혈당 관리 가이드 — AI 생성 시간별 조언 (총평 대체) */}
       <AnimatedSection>
         <Card>
-          <View style={styles.cardHeaderRow}>
-            <ThemedText variant="headline" style={styles.cardTitle}>
-              {aiLoading ? 'AI 맞춤 루틴' : settings.aiPlan ? 'AI 맞춤 루틴' : '기본 루틴 (룰 기준)'}
-            </ThemedText>
-            {settings.aiPlan && !aiLoading && (
-              <ThemedText variant="caption">AI 생성</ThemedText>
-            )}
-          </View>
-          {aiLoading ? (
+          <ThemedText variant="headline" style={styles.cardTitle}>
+            혈당 관리 가이드
+          </ThemedText>
+          {adviceLoading ? (
             <View style={styles.skeletonStack}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <View key={`sk-${i}`} style={styles.timelineRow}>
-                  <Skeleton width={46} height={14} />
-                  <Skeleton width={20} height={16} />
-                  <View style={styles.skeletonFlex}>
-                    <Skeleton width="70%" height={14} />
-                    <Skeleton width="45%" height={12} />
-                  </View>
+              <Skeleton width="100%" height={14} />
+              <Skeleton width="88%" height={14} />
+              <Skeleton width="70%" height={14} />
+            </View>
+          ) : adviceItems.length > 0 ? (
+            <>
+              {adviceItems.map((a, i) => (
+                <View key={`${a.time}-${i}`} style={styles.adviceRow}>
+                  <ThemedText variant="subhead" style={styles.adviceTime}>
+                    {a.time}
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.adviceText}>
+                    {a.text}
+                  </ThemedText>
                 </View>
               ))}
-            </View>
+              <Pressable
+                style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}
+                onPress={generateAdvice}
+                accessibilityRole="button"
+                accessibilityLabel="가이드 다시 만들기"
+              >
+                <Ionicons name="refresh" size={14} color={colors.primary} />
+                <ThemedText variant="caption" style={styles.textButtonText}>
+                  가이드 다시 만들기
+                </ThemedText>
+              </Pressable>
+            </>
           ) : (
-            displaySchedule.map((item, i) => {
-              const meta = TYPE_META[item.type] || TYPE_META.custom;
-              return (
-                <View key={`${item.time}-${item.type}-${i}`} style={styles.timelineRow}>
-                  <ThemedText variant="subhead" style={styles.timelineTime}>
-                    {item.time}
-                  </ThemedText>
-                  <Ionicons name={meta.icon} size={16} color={meta.color} />
-                  <View style={styles.timelineBody}>
-                    <ThemedText variant="body" style={styles.timelineTitle}>
-                      {item.title}
-                    </ThemedText>
-                    {item.desc ? <ThemedText variant="caption">{item.desc}</ThemedText> : null}
-                  </View>
-                </View>
-              );
-            })
+            <>
+              <ThemedText variant="body" style={styles.cardBody}>
+                {adviceFailed
+                  ? '가이드 생성에 실패했어요. 다시 시도해 주세요.'
+                  : 'AI가 계획에 맞춰 식사·혈당 상승·운동 타이밍을 만들어 드릴게요.'}
+              </ThemedText>
+              <Pressable
+                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                onPress={generateAdvice}
+                disabled={!loaded || adviceLoading}
+                accessibilityRole="button"
+              >
+                <Ionicons name="sparkles" size={16} color={colors.onTint} />
+                <ThemedText variant="headline" style={styles.primaryButtonText}>
+                  {adviceFailed ? '다시 시도' : 'AI 가이드 만들기'}
+                </ThemedText>
+              </Pressable>
+            </>
           )}
         </Card>
       </AnimatedSection>
-
-      {aiFailed && !aiLoading && (
-        <AnimatedSection>
-          <Card>
-            <ThemedText variant="body" style={styles.cardBody}>
-              루틴 생성에 실패했어요. 잠시 후 다시 시도해 주세요.
-            </ThemedText>
-            <ThemedText variant="caption" style={styles.hint}>
-              그동안은 위 기본 루틴을 참고할 수 있어요.
-            </ThemedText>
-          </Card>
-        </AnimatedSection>
-      )}
-
-      {comment && !aiLoading && (
-        <AnimatedSection>
-          <Card>
-            <ThemedText variant="headline" style={styles.cardTitle}>
-              AI 루틴 총평
-            </ThemedText>
-            <ThemedText variant="body" style={styles.cardBody}>
-              {comment}
-            </ThemedText>
-          </Card>
-        </AnimatedSection>
-      )}
     </ScrollView>
   );
 }
@@ -310,26 +258,10 @@ const styles = StyleSheet.create({
   lead: { color: colors.sub, lineHeight: 22 },
   cardTitle: { marginBottom: spacing.sm },
   cardBody: { color: colors.sub },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  chipBlock: { marginBottom: spacing.md },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  chipSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  pressed: { opacity: 0.7 },
-  chipText: { color: colors.sub },
-  chipTextSelected: { color: colors.primary, fontWeight: '600' },
-  hint: { color: colors.sub, marginTop: spacing.sm },
   customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   customTime: { color: colors.primary, fontWeight: '700', width: 46 },
   customTitle: { color: colors.text, flex: 1 },
-  inputRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  inputRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   timeInput: {
     width: 76,
     backgroundColor: colors.bg,
@@ -359,12 +291,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorText: { color: colors.danger, marginTop: spacing.xs },
-  timelineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
-  timelineTime: { color: colors.text, fontWeight: '700', width: 46 },
-  timelineBody: { flex: 1 },
-  timelineTitle: { color: colors.text },
+  emptyText: { color: colors.sub },
+  adviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
+  adviceTime: { color: colors.primary, fontWeight: '700', width: 46 },
+  adviceText: { color: colors.sub, flex: 1, lineHeight: 22 },
+  textButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  textButtonText: { color: colors.primary, fontWeight: '600' },
   skeletonStack: { gap: spacing.sm },
-  skeletonFlex: { flex: 1, gap: spacing.xs },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -374,14 +313,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     paddingVertical: spacing.md,
+    marginTop: spacing.sm,
   },
-  disabledButton: { opacity: 0.4 },
+  pressed: { opacity: 0.7 },
   primaryButtonText: { color: colors.onTint },
-  successCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.successSoft,
-  },
-  successText: { color: colors.text, flex: 1 },
 });

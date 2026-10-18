@@ -13,10 +13,10 @@ const FOOD_VISION_MODEL = 'z-ai/glm-5.3-flash';
 const FOOD_VISION_FALLBACK_MODEL = 'meta/llama-3.2-11b-vision-instruct';
 const TEXT_MODEL = 'z-ai/glm-5.3-flash';
 const PROFILE_MODEL = 'z-ai/glm-5.3-flash';
-// 루틴 계획 전용 — glm-5.3-flash는 2000토큰급 JSON 생성 시 NIM 게이트웨이 30초 한계 502 빈번(밤 시간대)
-// → llama-3.2-11b-vision(텍스트 모드)이 15.4초로 빠르고 JSON·한국어·어미 준수 확인됨 (2026-10-18 실측)
-// 실패 시 glm-5.3-flash로 1회 폴백
-const ROUTINE_MODEL = 'meta/llama-3.2-11b-vision-instruct';
+// 루틴 계획 전용 — Gemini (gemini-flash-lite-latest: 무료 티어, JSON 모드로 2~3초 응답)
+// 주의: 'gemini-2.5-flash-lite' 고정명은 이 키에서 404, thinkingConfig는 400 → latest alias + JSON 모드만 사용
+const ROUTINE_MODEL = 'gemini-flash-lite-latest';
+const GEMINI_DIRECT_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // llama-3.2 폴백 전용 시스템 프롬프트 — 11b 모델이 완성 음식 사진을 재료로 오판하는 문제 대응:
 // dish/ingredients 판정 기준을 명시하고 애매하면 dish로 강제한다 (재료 오판 시 레시피 분기로 빠지는 피해가 큼)
@@ -232,43 +232,87 @@ export async function analyzeProfile(answers, analysis) {
   }
 }
 
-// 설정 + 사용자 직접 계획 + 기본 룰 → AI 맞춤 하루 루틴 생성 | null (실패 시 호출측이 룰 기본안 표시)
-export async function generateRoutinePlan({ wakeTime, bedTime, customPlans = [], surveyAnswers = {}, baseline = [] }) {
-  const baselineLines = baseline.map((s) => `${s.time} ${s.title}`).join(', ') || '없음';
+// Gemini chat 호출 → content 텍스트 | null (루틴 계획 전용, JSON 모드)
+// 라우트 없이 직접 호출 — Google API는 CORS를 허용하므로 웹에서도 x-goog-api-key 헤더로 동작
+async function geminiChat({ system, prompt, temperature = 0.5, maxTokens = 1000 }) {
+  const key = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  if (!key) {
+    console.warn('EXPO_PUBLIC_GEMINI_API_KEY 없음 — app/.env에 키 입력 후 개발 서버 재시작');
+    return null;
+  }
+  try {
+    const res = await fetch(`${GEMINI_DIRECT_URL}/${ROUTINE_MODEL}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'x-goog-api-key': key,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          responseMimeType: 'application/json', // JSON 강제 — 파싱 안정성
+        },
+      }),
+    });
+    if (!res.ok) {
+      // 실패 원인 진단용 — Google의 오류 본문을 콘솔에 남김
+      const errText = await res.text().catch(() => '');
+      console.warn('Gemini 응답 오류:', res.status, errText.slice(0, 200));
+      return null;
+    }
+    const data = await res.json();
+    const text =
+      data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+    return text || null;
+  } catch (e) {
+    console.warn('Gemini 호출 실패:', e);
+    return null;
+  }
+}
+
+// 설정 + 사용자 직접 계획 → AI 맞춤 하루 스케줄 생성 | null (실패 시 호출측이 룰 기본안 표시)
+// 1순위 Gemini (직접 호출, gemini-flash-lite-latest) → 폴백 glm-5.3-flash → llama-3.2-11b-vision
+export async function generateRoutinePlan({ wakeTime, bedTime, customPlans = [], surveyAnswers = {} }) {
   const customLines = customPlans.length > 0 ? customPlans.map((p) => `${p.time} ${p.title}`).join(', ') : '없음';
   const survey = surveyAnswers || {};
   const facts = `활동 수준 ${survey.activity || '보통'}, 민감도 ${survey.carbSensitivity || '보통'}, 목표 ${survey.weightGoal || '유지'}.`;
   const prompt =
-    `기상 ${wakeTime}, 취침 ${bedTime}. 사용자가 직접 추가한 계획: ${customLines}. (이 시간과 제목은 반드시 포함) ` +
-    `기본 룰 루틴(참고용): ${baselineLines}. ${facts} ` +
-    '이 정보로 혈당 관리에 맞춘 하루 시간표를 만들어. 식사·혈당 측정(식후 30분과 2시간)·산책·수면을 배치하고, ' +
-    '사용자 계획 시간과 겹치지 않게 조정해. 같은 항목을 반복하지 마라. ' +
-    '각 항목은 time(HH:MM), type(meal|glucose|exercise|sleep|wake|custom|snack), title(짧게), desc(1문장)이고 시간순 정렬 20개 이하. ' +
-    'comment는 루틴 총평 1~2문장(존댓말, "사용자"라는 단어 금지). 설명 없이 JSON만: ' +
+    `기상 ${wakeTime}, 취침 ${bedTime}. 사용자가 직접 추가한 계획: ${customLines}. (이 시간과 제목은 반드시 포함) ${facts} ` +
+    '이 데이터로 혈당 관리에 맞춘 하루 스케줄을 설계해. ' +
+    '각 항목은 time(HH:MM), type(meal|glucose|exercise|sleep|wake|custom|snack), title(짧게), desc(앞으로의 계획과의 관계를 포함한 1문장)이고 시간순 정렬 20개 이하. ' +
+    'comment는 스케줄 총평 1~2문장. 설명 없이 JSON만: ' +
     '{"schedule":[{"time":"07:30","type":"meal","title":"아침 식사","desc":"채소와 단백질을 먼저"}],"comment":"..."}';
 
-  let raw = await nimChat({
-    model: ROUTINE_MODEL,
-    temperature: 0.5,
-    maxTokens: 1000, // 비-추론 모델 — 시간표 JSON에 충분
-    messages: [
-      { role: 'system', content: '당신은 혈당 관리 건강 코치다. 요청된 형식의 JSON만 출력한다.' },
-      { role: 'user', content: prompt },
-    ],
-  });
+  // 세 시도 모두 동일 시스템 프롬프트 — 설계 원칙을 시스템 레벨로 강제
+  const systemPrompt =
+    '당신은 혈당 스파이크와 식후 나른함을 피하는 하루 스케줄을 설계하는 혈당 관리 코치다. 아래 원칙을 최우선으로 지킨다. ' +
+    '① 사용자가 입력한 계획(특히 중요한 일) 시간과 식사 시간의 관계가 가장 중요하다 — 식후 나른함(식사 직후 30~90분)이 중요한 일과 겹치지 않게, 식사를 최소 1시간 전에 마치도록 계획 시간에서 역산 배치한다. ' +
+    '② 중요한 일 직전에는 고GI 탄수화물·폭식을 피하고 가볍게 먹도록 항목 설명에 안내한다. ' +
+    '③ 식사마다 식후 30분과 2시간 혈당 측정, 식후 산책을 배치한다. ' +
+    '④ 식사 간격은 4~6시간, 수면은 7시간 이상으로 설계한다. ' +
+    '⑤ 항목 설명은 간결한 존댓말 1문장, 권고는 "~해야 함"으로 쓰고 같은 항목을 반복하지 않으며 "사용자"라는 단어를 쓰지 않는다. ' +
+    '요청된 형식의 JSON만 출력한다.';
+  const buildMessages = (system) => [
+    { role: 'system', content: system },
+    { role: 'user', content: prompt },
+  ];
 
-  // 폴백: 11b 실패 시 glm-5.3-flash 1회 (품질 우선 시 수동 재시도)
+  // 1순위: Gemini (직접 호출 — gemini-flash-lite-latest, JSON 모드로 빠르고 안정)
+  let raw = await geminiChat({ system: systemPrompt, prompt, maxTokens: 2000 });
+
+  // 2순위: glm-5.3-flash (한국어 품질 우선)
   if (!raw) {
-    console.warn('루틴 생성 실패 — glm-5.3-flash 폴백 사용');
-    raw = await nimChat({
-      model: PROFILE_MODEL,
-      temperature: 0.5,
-      maxTokens: 2000,
-      messages: [
-        { role: 'system', content: '당신은 혈당 관리 건강 코치다. 요청된 형식의 JSON만 출력한다.' },
-        { role: 'user', content: prompt },
-      ],
-    });
+    console.warn('스케줄 생성 실패 — glm-5.3-flash 폴백 사용');
+    raw = await nimChat({ model: PROFILE_MODEL, temperature: 0.5, maxTokens: 2000, messages: buildMessages(systemPrompt) });
+  }
+
+  // 3순위: llama-3.2-11b-vision (가장 빠르고 안정)
+  if (!raw) {
+    console.warn('스케줄 생성 실패 — llama-3.2-11b-vision 폴백 사용');
+    raw = await nimChat({ model: FOOD_VISION_FALLBACK_MODEL, temperature: 0.5, maxTokens: 1000, messages: buildMessages(systemPrompt) });
   }
   if (!raw) return null;
 
@@ -295,7 +339,7 @@ export async function generateRoutinePlan({ wakeTime, bedTime, customPlans = [],
     return { schedule, comment: limitSentences(parsed?.comment, 2) || null };
   } catch (e) {
     // 잘린 응답 복구 — 완결된 항목 객체만 개별 추출 (반복 생성 중 max_tokens로 잘린 경우)
-    console.warn('루틴 생성 응답이 JSON이 아님 — 잘린 응답 복구 시도');
+    console.warn('스케줄 생성 응답이 JSON이 아님 — 잘린 응답 복구 시도');
     const schedule = normalizeSchedule(
       (raw.match(/\{[^{}]*\}/g) || [])
         .map((m) => {

@@ -1,19 +1,20 @@
 // 디자인 토큰 — 단일 진실 공급원 (expo-design-system 스킬)
 // 규칙: 이 파일 밖에서 색상/폰트/간격/그림자 리터럴 금지
 export const colors = {
-  primary: '#6B8AFB',
-  primarySoft: '#E8EDFF',
-  accent: '#8E7BFF',
+  primary: '#FB6F92',
+  primaryDeep: '#F43F75',
+  primarySoft: '#FEE9F0',
+  accent: '#FF9770',
   success: '#3FC97C',
   successSoft: '#E6F7EE',
   warning: '#F5A25D',
   warningSoft: '#FDF1E3',
   danger: '#FF6B6B',
-  bg: '#F6F8FE',
+  bg: '#FEF7F9',
   card: '#FFFFFF',
   text: '#2B2F4A',
   sub: '#8A90A8',
-  border: '#ECEFF9',
+  border: '#F9ECF0',
   // 틴트(브랜드색) 배경 위 텍스트 — 라이트 고정 앱이므로 의도적 고정값
   onTint: '#FFFFFF',
   onTintSoft: 'rgba(255, 255, 255, 0.8)',
