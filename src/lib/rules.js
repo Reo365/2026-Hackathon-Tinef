@@ -41,3 +41,11 @@ export function predictGlucose(items, surveyAnswers, mealTime) {
 
   return { peakMgDl: BASE_GLUCOSE + totalRise, risePerItem, base: BASE_GLUCOSE };
 }
+
+// 혈당 수준 분류 — StatusBadge·문구 표준화 기준 (정상 <140 / 주의 140~199 / 경고 ≥200)
+export function glucoseLevel(mgDl) {
+  if (mgDl == null) return 'ok';
+  if (mgDl >= 200) return 'danger';
+  if (mgDl >= 140) return 'warn';
+  return 'ok';
+}

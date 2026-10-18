@@ -7,6 +7,7 @@ export const colors = {
   success: '#3FC97C',
   successSoft: '#E6F7EE',
   warning: '#F5A25D',
+  warningSoft: '#FDF1E3',
   danger: '#FF6B6B',
   bg: '#F6F8FE',
   card: '#FFFFFF',
@@ -16,6 +17,7 @@ export const colors = {
   // 틴트(브랜드색) 배경 위 텍스트 — 라이트 고정 앱이므로 의도적 고정값
   onTint: '#FFFFFF',
   onTintSoft: 'rgba(255, 255, 255, 0.8)',
+  scrim: 'rgba(0, 0, 0, 0.4)', // 모달 배경 딤
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };

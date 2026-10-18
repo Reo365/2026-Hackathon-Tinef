@@ -1,14 +1,16 @@
-// 섹션 높이 전환 애니메이션 — 내용 실측 후 높이 보간
-// 마운트 시 0→h, 내용 변화 시 h→h. 뷰포트 위쪽 섹션의 높이 변화는 onHeightDelta로 알려
-// 스크롤 보정이 가능하게 함 (위쪽 내용이 늘어나거나 줄 때 화면이 뛰는 것 방지)
+// 섹션 전환 — 웹: 높이 보간 애니메이션 / 네이티브: 즉시 렌더
+// 네이티브(Expo Go)에서 Animated 네이티브 모듈 이슈로 섹션이 표시되지 않는 사례 방지 →
+// 모바일은 컨테이너 없이 children을 직접 렌더해 항상 확실히 표시 (애니메이션은 웹 전용)
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { Animated, Easing, Platform, View } from 'react-native';
+import { spacing } from '../../theme';
 
-export default function AnimatedSection({ children, onHeightDelta }) {
+// 웹 전용 — 내용 실측 후 높이 보간 (마운트 0→h, 변화 h→h)
+function AnimatedWeb({ children, onHeightDelta }) {
   const height = useRef(new Animated.Value(0)).current;
   const target = useRef(0);
   const innerRef = useRef(null);
-  const [staticMode, setStaticMode] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   const applyHeight = (rawH, pageY) => {
     const next = Math.round(rawH);
@@ -19,34 +21,41 @@ export default function AnimatedSection({ children, onHeightDelta }) {
       toValue: next,
       duration: 300,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false, // height 보간은 JS 드라이버 필수
+      useNativeDriver: false,
     }).start();
     if (onHeightDelta) onHeightDelta(delta, pageY);
   };
 
   useEffect(() => {
-    // 매 렌더 다음 프레임에 내용 실측 — 어떤 크기 변화도 누락하지 않음
     const id = requestAnimationFrame(() => {
       const node = innerRef.current;
       if (!node) return;
       if (typeof node.measure !== 'function') {
-        setStaticMode(true); // 실측 불가 환경 — 클리핑 없이 즉시 표시
+        setLocked(false);
         return;
       }
-      // pageY: 화면 기준 위치(여기서는 페이지 스크롤이 없어 뷰포트 기준과 동일)
       node.measure((x, y, w, h) => applyHeight(h, y));
     });
     return () => cancelAnimationFrame(id);
   });
 
-  if (staticMode) {
+  if (!locked) {
     return <View>{children}</View>;
   }
 
   return (
     <Animated.View style={{ height, overflow: 'hidden' }}>
-      {/* 내용은 자연 크기로 렌더되고, 바깥 컨테이너가 높이를 보간하며 잘라낸다 */}
-      <View ref={innerRef}>{children}</View>
+      <View ref={innerRef} style={{ gap: spacing.md }}>
+        {children}
+      </View>
     </Animated.View>
   );
+}
+
+export default function AnimatedSection({ children, onHeightDelta }) {
+  if (Platform.OS === 'web') {
+    return <AnimatedWeb onHeightDelta={onHeightDelta}>{children}</AnimatedWeb>;
+  }
+  // 네이티브 — 애니메이션 없이 즉시 렌더 (정보 누락 방지)
+  return <View style={{ gap: spacing.md }}>{children}</View>;
 }

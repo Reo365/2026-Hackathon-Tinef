@@ -6,6 +6,7 @@ export const KEYS = {
   FOOD_LOGS: 'food_logs',
   EXERCISE_LOGS: 'exercise_logs',
   GLUCOSE_LOGS: 'glucose_logs',
+  ROUTINE_SETTINGS: 'routine_settings',
 };
 
 export async function get(key) {

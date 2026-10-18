@@ -3,7 +3,6 @@
     "name": "app",
     "slug": "app",
     "scheme": "healthapp",
-    "scheme": "healthapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,7 +23,8 @@
       "output": "server"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

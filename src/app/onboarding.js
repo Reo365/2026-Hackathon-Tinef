@@ -1,39 +1,65 @@
-// 설문 4단계 — 한 화면에서 step 상태로 관리 (DEVLOG 결정 7)
-import { useState } from 'react';
+// 설문 3단계 — 한 화면에서 step 상태로 관리 (DEVLOG 결정 7, 활동수준·스트레스·목표 질문 제거)
+// 설정의 "프로필 수정"으로 재진입 시 기존 답변을 불러와 채워줌(편집 모드)
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { colors, radius, spacing, type } from '../../theme';
 import ThemedText from '../components/ThemedText';
-import { saveOnboarding } from '../lib/storage';
+import { get, KEYS, saveOnboarding } from '../lib/storage';
+import { deriveCarbSensitivity } from '../lib/analysis';
 
 const STEPS = [
-  { title: '기본 정보', intro: '나이·성별·활동량으로 하루 필요 칼로리를 계산해요', questions: [
+  { title: '기본 정보', intro: '나이·성별·신체 정보로 하루 필요 칼로리를 계산해요', questions: [
     { key: 'age', label: '나이', type: 'input', placeholder: '예: 25' },
     { key: 'gender', label: '성별', type: 'choice', options: ['남', '여'] },
     { key: 'height', label: '키 (cm)', type: 'input', placeholder: '예: 170' },
     { key: 'weight', label: '몸무게 (kg)', type: 'input', placeholder: '예: 65' },
-    { key: 'activity', label: '활동 수준', type: 'choice', options: ['낮음', '보통', '높음', '매우높음'] },
   ]},
-  { title: '생활 습관', intro: '수면과 스트레스는 혈당 조절에 큰 영향을 줘요', questions: [
+  { title: '생활 습관', intro: '수면 습관은 혈당 조절에 큰 영향을 줘요', questions: [
     { key: 'exercise', label: '운동 빈도', type: 'choice', options: ['거의 안 함', '주 1-2회', '주 3-4회', '주 5회 이상'] },
     { key: 'sleep', label: '평소 수면 시간', type: 'choice', options: ['4시간 이하', '5시간', '6시간', '7시간', '8시간 이상'] },
-    { key: 'stress', label: '스트레스 수준', type: 'choice', options: ['낮음', '보통', '높음'] },
   ]},
-  { title: '식이 패턴', intro: '식사 후 몸의 반응은 혈당 민감도의 힌트가 돼요', questions: [
+  { title: '식이 패턴', intro: '식사 후 몸의 반응으로 혈당 민감도를 파악해요', questions: [
     { key: 'mealReactions', label: '식사 후 반응', type: 'choice', options: ['특별히 없음', '나른함/졸림', '어지러움', '소화 불량'] },
-    { key: 'carbSensitivity', label: '탄수화물 민감도', type: 'choice', options: ['낮음', '보통', '높음'] },
-    { key: 'familyHistory', label: '가족력 여부', type: 'choice', options: ['없음', '있음'] },
-  ]},
-  { title: '목표', intro: '목표에 맞춰 칼로리와 식단 방향을 잡아요', questions: [
-    { key: 'weightGoal', label: '체중 목표', type: 'choice', options: ['감량', '유지', '증량'] },
-    { key: 'goalPeriod', label: '목표 기간', type: 'choice', options: ['1개월', '3개월', '6개월', '1년'] },
   ]},
 ];
+
+// 저장된 수면 값(숫자) → 칩 라벨 매핑 (예: 7 → '7시간', 3 → '4시간 이하')
+function sleepLabel(n) {
+  const h = Number(n);
+  if (!h) return undefined;
+  if (h <= 4) return '4시간 이하';
+  if (h >= 8) return '8시간 이상';
+  return `${h}시간`;
+}
+
+// 이전 설문에서는 물어봤지만 지금은 삭제된 항목 — 편집 시 잔존값 제거
+const STALE_KEYS = ['activity', 'stress', 'weightGoal', 'goalPeriod', 'familyHistory'];
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showHint, setShowHint] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  // 기존 답변이 있으면 채워서 시작 (설정 → 프로필 수정)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const saved = await get(KEYS.SURVEY_ANSWERS);
+      if (!mounted || !saved) return;
+      const clean = {};
+      for (const [key, value] of Object.entries(saved)) {
+        if (!STALE_KEYS.includes(key)) clean[key] = value;
+      }
+      if (clean.sleep != null) clean.sleep = sleepLabel(clean.sleep) || clean.sleep;
+      setAnswers((prev) => ({ ...clean, ...prev }));
+      setEditMode(true);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -57,11 +83,14 @@ export default function Onboarding() {
       height: Number(answers.height) || 0,
       weight: Number(answers.weight) || 0,
       sleep: sleepHours,
-      familyHistory: answers.familyHistory === '있음',
     };
+    for (const key of STALE_KEYS) delete cleaned[key];
+    // 탄수화물 민감도 질문 제거 — 예전에 직접 응답한 값이 있으면 존중, 없으면 식사 후 반응 등에서 유도
+    cleaned.carbSensitivity = cleaned.carbSensitivity || deriveCarbSensitivity(cleaned);
     await saveOnboarding(cleaned);
-    // 설문 완료 → 개인 분석 결과 화면 경유 후 홈 진입
-    router.replace('/analysis-result');
+    // 편집 진입(설정→프로필 수정)이면 설정으로 복귀, 첫 설문이면 홈으로 진입
+    if (editMode) router.back();
+    else router.replace('/(tabs)');
   };
 
   const goNext = () => {
@@ -147,6 +176,17 @@ export default function Onboarding() {
           >
             <ThemedText variant="headline" style={styles.buttonSecondaryText}>
               이전
+            </ThemedText>
+          </Pressable>
+        )}
+        {step === 0 && editMode && (
+          <Pressable
+            style={({ pressed }) => [styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+          >
+            <ThemedText variant="headline" style={styles.buttonSecondaryText}>
+              취소
             </ThemedText>
           </Pressable>
         )}
